@@ -6,11 +6,11 @@ rem *                             / __| | | | |_) | |
 rem *                            | (__| |_| |  _ <| |___
 rem *                             \___|\___/|_| \_\_____|
 rem *
-rem * Copyright (C) 1998 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+rem * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
 rem *
 rem * This software is licensed as described in the file COPYING, which
 rem * you should have received as part of this distribution. The terms
-rem * are also available at http://curl.haxx.se/docs/copyright.html.
+rem * are also available at https://curl.haxx.se/docs/copyright.html.
 rem *
 rem * You may opt to use, copy, modify, merge, publish, distribute and/or sell
 rem * copies of the Software, and permit persons to whom the Software is
@@ -26,8 +26,6 @@ rem
 rem This batch file must be used to set up a git tree to build on systems where
 rem there is no autotools support (i.e. DOS and Windows).
 rem
-rem This file is not included or required for curl's release archives or daily 
-rem snapshot archives.
 
 :begin
   rem Set our variables
@@ -107,8 +105,8 @@ rem
   set BASIC_HUGEHELP=0
 
   rem Create Makefile
+  echo * %CD%\Makefile
   if exist Makefile.dist (
-    echo * %CD%\Makefile
     copy /Y Makefile.dist Makefile 1>NUL 2>&1
     if errorlevel 1 (
       if "%OS%" == "Windows_NT" endlocal
@@ -129,8 +127,8 @@ rem
   cmd /c exit 0
 
   rem Create curlbuild.h
+  echo * %CD%\include\curl\curlbuild.h
   if exist include\curl\curlbuild.h.dist (
-    echo * %CD%\include\curl\curlbuild.h
     copy /Y include\curl\curlbuild.h.dist include\curl\curlbuild.h 1>NUL 2>&1
     if errorlevel 1 (
       if "%OS%" == "Windows_NT" endlocal
@@ -189,7 +187,7 @@ rem
     del include\curl\curlbuild.h 2>NUL
     if exist include\curl\curlbuild.h (
       exit /B 3
-    /)
+    )
   )
 
   exit /B
@@ -333,7 +331,6 @@ rem
   echo the manual is not required and a summary of the options will still be available
   echo (curl --help^). To integrate the manual your PATH is required to have
   echo groff/nroff, perl and optionally gzip for compression.
-  echo.
   goto success
 
 :error

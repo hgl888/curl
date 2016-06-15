@@ -10,7 +10,7 @@ rem * Copyright (C) 2014 - 2015, Steve Holme, <steve_holme@hotmail.com>.
 rem *
 rem * This software is licensed as described in the file COPYING, which
 rem * you should have received as part of this distribution. The terms
-rem * are also available at http://curl.haxx.se/docs/copyright.html.
+rem * are also available at https://curl.haxx.se/docs/copyright.html.
 rem *
 rem * You may opt to use, copy, modify, merge, publish, distribute and/or sell
 rem * copies of the Software, and permit persons to whom the Software is
@@ -20,13 +20,6 @@ rem * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
 rem * KIND, either express or implied.
 rem *
 rem ***************************************************************************
-
-rem NOTES
-rem
-rem Do not set %ERRORLEVEL% to anything. %ERRORLEVEL% is a special variable
-rem that only contains errorlevel when %ERRORLEVEL% is not set. Same for %CD%.
-rem http://blogs.msdn.com/b/oldnewthing/archive/2008/09/26/8965755.aspx
-rem If you need to set the errorlevel do this instead: CALL :seterr [#]
 
 :begin
   rem Check we are running on a Windows NT derived OS
@@ -49,7 +42,9 @@ rem If you need to set the errorlevel do this instead: CALL :seterr [#]
 :parseArgs
   if "%~1" == "" goto start
 
-  if /i "%~1" == "vc6" (
+  if /i "%~1" == "pre" (
+    set VERSION=PRE
+  ) else if /i "%~1" == "vc6" (
     set VERSION=VC6
   ) else if /i "%~1" == "vc7" (
     set VERSION=VC7
@@ -82,13 +77,16 @@ rem If you need to set the errorlevel do this instead: CALL :seterr [#]
   shift & goto parseArgs
  
 :start
-  if "%MODE%" == "GENERATE" (
-    call ..\buildconf
-  ) else if "%VERSION%" == "PRE" (
-    call ..\buildconf -clean
-  ) else if "%VERSION%" == "ALL" (
-    call ..\buildconf -clean
+  if exist ..\buildconf.bat (
+    if "%MODE%" == "GENERATE" (
+      call ..\buildconf
+    ) else if "%VERSION%" == "PRE" (
+      call ..\buildconf -clean
+    ) else if "%VERSION%" == "ALL" (
+      call ..\buildconf -clean
+    )
   )
+  if "%VERSION%" == "PRE" goto success
   if "%VERSION%" == "VC6" goto vc6
   if "%VERSION%" == "VC7" goto vc7
   if "%VERSION%" == "VC7.1" goto vc71
@@ -244,7 +242,7 @@ rem
 :generate
   if not exist %2 (
     echo.
-    echo Error: Cannot open %CD%\%2
+    echo Error: Cannot open %2
     exit /B
   )
 
@@ -383,10 +381,11 @@ rem
 :syntax
   rem Display the help
   echo.
-  echo Usage: generate [compiler] [-clean]
+  echo Usage: generate [what] [-clean]
   echo.
-  echo Compiler:
+  echo What to generate:
   echo.
+  echo pre       - Prerequisites only
   echo vc6       - Use Visual Studio 6
   echo vc7       - Use Visual Studio .NET
   echo vc7.1     - Use Visual Studio .NET 2003

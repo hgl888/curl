@@ -7,11 +7,11 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at http://curl.haxx.se/docs/copyright.html.
+ * are also available at https://curl.haxx.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -32,6 +32,7 @@
 #include "cyassl.h"         /* CyaSSL versions */
 #include "schannel.h"       /* Schannel SSPI version */
 #include "darwinssl.h"      /* SecureTransport (Darwin) version */
+#include "mbedtls.h"        /* mbedTLS versions */
 
 #ifndef MAX_PINNED_PUBKEY_SIZE
 #define MAX_PINNED_PUBKEY_SIZE 1048576 /* 1MB */
@@ -45,7 +46,7 @@
 #define SHA256_DIGEST_LENGTH 32 /* fixed size */
 #endif
 
-/* see http://tools.ietf.org/html/draft-ietf-tls-applayerprotoneg-04 */
+/* see https://tools.ietf.org/html/draft-ietf-tls-applayerprotoneg-04 */
 #define ALPN_HTTP_1_1_LENGTH 8
 #define ALPN_HTTP_1_1 "http/1.1"
 
@@ -95,17 +96,48 @@ CURLcode Curl_ssl_push_certinfo(struct SessionHandle * data, int certnum,
 
 /* Functions to be used by SSL library adaptation functions */
 
-/* extract a session ID */
+/* Lock session cache mutex.
+ * Call this before calling other Curl_ssl_*session* functions
+ * Caller should unlock this mutex as soon as possible, as it may block
+ * other SSL connection from making progress.
+ * The purpose of explicitly locking SSL session cache data is to allow
+ * individual SSL engines to manage session lifetime in their specific way.
+ */
+void Curl_ssl_sessionid_lock(struct connectdata *conn);
+
+/* Unlock session cache mutex */
+void Curl_ssl_sessionid_unlock(struct connectdata *conn);
+
+/* extract a session ID
+ * Sessionid mutex must be locked (see Curl_ssl_sessionid_lock).
+ * Caller must make sure that the ownership of returned sessionid object
+ * is properly taken (e.g. its refcount is incremented
+ * under sessionid mutex).
+ */
 bool Curl_ssl_getsessionid(struct connectdata *conn,
                            void **ssl_sessionid,
-                           size_t *idsize) /* set 0 if unknown */;
-/* add a new session ID */
+                           size_t *idsize); /* set 0 if unknown */
+/* add a new session ID
+ * Sessionid mutex must be locked (see Curl_ssl_sessionid_lock).
+ * Caller must ensure that it has properly shared ownership of this sessionid
+ * object with cache (e.g. incrementing refcount on success)
+ */
 CURLcode Curl_ssl_addsessionid(struct connectdata *conn,
                                void *ssl_sessionid,
                                size_t idsize);
-/* Kill a single session ID entry in the cache */
+/* Kill a single session ID entry in the cache
+ * Sessionid mutex must be locked (see Curl_ssl_sessionid_lock).
+ * This will call engine-specific curlssl_session_free function, which must
+ * take sessionid object ownership from sessionid cache
+ * (e.g. decrement refcount).
+ */
 void Curl_ssl_kill_session(struct curl_ssl_session *session);
-/* delete a session from the cache */
+/* delete a session from the cache
+ * Sessionid mutex must be locked (see Curl_ssl_sessionid_lock).
+ * This will call engine-specific curlssl_session_free function, which must
+ * take sessionid object ownership from sessionid cache
+ * (e.g. decrement refcount).
+ */
 void Curl_ssl_delsessionid(struct connectdata *conn, void *ssl_sessionid);
 
 /* get N random bytes into the buffer, return 0 if a find random is filled
@@ -117,7 +149,8 @@ CURLcode Curl_ssl_md5sum(unsigned char *tmp, /* input */
                          unsigned char *md5sum, /* output */
                          size_t md5len);
 /* Check pinned public key. */
-CURLcode Curl_pin_peer_pubkey(const char *pinnedpubkey,
+CURLcode Curl_pin_peer_pubkey(struct SessionHandle *data,
+                              const char *pinnedpubkey,
                               const unsigned char *pubkey, size_t pubkeylen);
 
 bool Curl_ssl_cert_status_request(void);
